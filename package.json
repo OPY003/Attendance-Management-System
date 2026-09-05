@@ -1,0 +1,32 @@
+{
+  "name": "uapms-monorepo",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Universal Attendance & Presence Management System (UAPMS)",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w packages/shared-types && npm run build -w packages/validation && npm run build -w packages/rule-engine-core && npm run build -w apps/api",
+    "test": "npm run test --workspaces --if-present",
+    "test:security": "npm run test:security -w apps/api",
+    "dev:api": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "db:migrate": "npm run db:migrate -w apps/api",
+    "db:seed": "npm run db:seed -w apps/api"
+  },
+  "keywords": [
+    "attendance",
+    "presence",
+    "multi-tenant",
+    "rbac",
+    "universal",
+    "enterprise"
+  ],
+  "author": "UAPMS Engineering Team",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
