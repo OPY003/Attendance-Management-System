@@ -1,15 +1,23 @@
-import express from 'express';
 import cors from 'cors';
+import express from 'express';
 import helmet from 'helmet';
+import { getDatabase } from './core/database/db.js';
+import { seedDatabase } from './core/database/seed.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import { authRouter } from './modules/auth/authRoutes.js';
-import { organizationRouter } from './modules/organizations/organizationRoutes.js';
-import { roleRouter } from './modules/roles/roleRoutes.js';
-import { personRouter } from './modules/persons/personRoutes.js';
-import { locationRouter } from './modules/locations/locationRoutes.js';
-import { groupRouter } from './modules/groups/groupRoutes.js';
-import { scheduleRouter } from './modules/schedules/scheduleRoutes.js';
 import { attendanceRouter } from './modules/attendance/attendanceRoutes.js';
+import { authRouter } from './modules/auth/authRoutes.js';
+import { detectionRouter } from './modules/detection/detectionRoutes.js';
+import { groupRouter } from './modules/groups/groupRoutes.js';
+import { locationRouter } from './modules/locations/locationRoutes.js';
+import { organizationRouter } from './modules/organizations/organizationRoutes.js';
+import { personRouter } from './modules/persons/personRoutes.js';
+import { roleRouter } from './modules/roles/roleRoutes.js';
+import { scheduleRouter } from './modules/schedules/scheduleRoutes.js';
+
+if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
+  getDatabase();
+  await seedDatabase();
+}
 
 export function createApp(): express.Application {
   const app = express();
@@ -53,6 +61,7 @@ export function createApp(): express.Application {
   app.use('/api/v1', groupRouter);
   app.use('/api/v1', scheduleRouter);
   app.use('/api/v1', attendanceRouter);
+  app.use('/api/v1/detection', detectionRouter);
 
   // 404 handler
   app.use((req, res) => {

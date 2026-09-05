@@ -15,6 +15,44 @@ export interface AttendanceCalculationResult {
 
 export const attendanceEngine = {
   /**
+   * Backward-compatibility wrapper used by older detection flows.
+   * Calculates punctuality for a single check-in event against a shift schedule.
+   */
+  evaluateCheckIn(timestamp: string, shift: Shift): AttendanceCalculationResult {
+    const checkInDate = new Date(timestamp);
+    const date = checkInDate.toISOString().split('T')[0];
+
+    const startDate = new Date(`${date}T${shift.start_time}Z`);
+    let scheduledStart = startDate;
+
+    if (shift.crosses_midnight && checkInDate.getTime() < startDate.getTime()) {
+      scheduledStart = new Date(startDate.getTime() - 24 * 60 * 60 * 1000);
+    }
+
+    const delayMs = checkInDate.getTime() - scheduledStart.getTime();
+    const delayMinutes = Math.max(0, Math.floor(delayMs / (60 * 1000)));
+
+    const gracePeriodMinutes = shift.grace_period_minutes ?? 10;
+    const isWithinGrace = delayMinutes <= gracePeriodMinutes;
+    const isLate = delayMinutes > gracePeriodMinutes;
+
+    return {
+      status: isLate ? 'LATE' : 'PRESENT',
+      late_minutes: delayMinutes,
+      early_leave_minutes: 0,
+      working_minutes: 0,
+      overtime_minutes: 0,
+      break_minutes: 0,
+      is_within_grace_period: isWithinGrace,
+      is_late: isLate,
+      is_early_leave: false,
+      explanation: isLate
+        ? `Check-in delayed by ${delayMinutes} minutes (exceeds ${gracePeriodMinutes}m grace period)`
+        : 'Check-in recorded within grace period',
+    };
+  },
+
+  /**
    * Calculates attendance status and durations given check-in, check-out, and shift rules
    */
   evaluateAttendance(params: {

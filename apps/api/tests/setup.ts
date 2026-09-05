@@ -1,25 +1,23 @@
-import { beforeAll, afterAll } from 'vitest';
-import path from 'path';
 import fs from 'fs';
-import { getDatabase, closeDatabase } from '../src/core/database/db.js';
+import path from 'path';
+import { closeDatabase, getDatabase } from '../src/core/database/db.js';
 import { seedDatabase } from '../src/core/database/seed.js';
 
-let testDbPath: string;
+const testDbPath = path.resolve(process.cwd(), `test-uapms-${process.pid}-${Math.random().toString(36).substring(2, 8)}.sqlite`);
+process.env.DATABASE_FILE = testDbPath;
 
-beforeAll(async () => {
-  const uniqueId = `${process.pid}_${Math.random().toString(36).substring(2, 8)}`;
-  testDbPath = path.resolve(process.cwd(), `test-uapms-${uniqueId}.sqlite`);
+getDatabase(testDbPath);
+await seedDatabase(testDbPath);
 
-  process.env.DATABASE_FILE = testDbPath;
-  getDatabase(testDbPath);
-  await seedDatabase(testDbPath);
-});
-
-afterAll(() => {
+const cleanup = () => {
   closeDatabase();
-  if (testDbPath && fs.existsSync(testDbPath)) {
+  if (fs.existsSync(testDbPath)) {
     try {
       fs.unlinkSync(testDbPath);
     } catch {}
   }
-});
+};
+
+process.on('exit', cleanup);
+process.on('SIGINT', cleanup);
+process.on('SIGTERM', cleanup);

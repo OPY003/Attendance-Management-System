@@ -1,10 +1,15 @@
+import fs from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
-import fs from 'fs';
 import { CREATE_TABLES_SQL } from './schema.js';
 
 const require = createRequire(import.meta.url);
-const { DatabaseSync } = require('node:sqlite');
+const sqliteModule = require('node:sqlite');
+const { DatabaseSync } = sqliteModule || {};
+
+if (!DatabaseSync) {
+  throw new Error('node:sqlite DatabaseSync is unavailable in this runtime.');
+}
 
 let dbInstance: any = null;
 
