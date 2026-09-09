@@ -1,8 +1,6 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
-import { getDatabase } from './core/database/db.js';
-import { seedDatabase } from './core/database/seed.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { attendanceRouter } from './modules/attendance/attendanceRoutes.js';
 import { authRouter } from './modules/auth/authRoutes.js';
@@ -13,11 +11,6 @@ import { organizationRouter } from './modules/organizations/organizationRoutes.j
 import { personRouter } from './modules/persons/personRoutes.js';
 import { roleRouter } from './modules/roles/roleRoutes.js';
 import { scheduleRouter } from './modules/schedules/scheduleRoutes.js';
-
-if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
-  getDatabase();
-  await seedDatabase();
-}
 
 export function createApp(): express.Application {
   const app = express();

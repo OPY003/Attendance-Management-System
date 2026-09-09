@@ -8,8 +8,8 @@
     "build": "tsc",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
-    "test": "vitest run",
-    "test:security": "vitest run tests/security",
+    "test": "vitest run --root .",
+    "test:security": "vitest run --root . tests/security",
     "db:migrate": "tsx src/core/database/migrate.ts",
     "db:seed": "tsx src/core/database/seed.ts"
   },
