@@ -8,12 +8,12 @@ import { AppError } from './errorHandler.js';
  * Validates that authenticated user is a verified active member of that organization.
  */
 export function requireTenant(req: Request, _res: Response, next: NextFunction): void {
-  if (!req.user) {
-    return next(new AppError('Authentication required before tenant resolution', 401, 'UNAUTHORIZED'));
-  }
-
   // Resolve tenant ID from header or params
-  const tenantId = (req.headers['x-organization-id'] as string) || req.params.orgId || req.params.organization_id;
+  const tenantId =
+    (req.headers['x-organization-id'] as string) ||
+    req.params.orgId ||
+    req.params.organizationId ||
+    req.params.organization_id;
 
   if (!tenantId) {
     return next(new AppError('Missing required organization identifier (x-organization-id header or route parameter)', 400, 'MISSING_TENANT_HEADER'));
@@ -27,6 +27,21 @@ export function requireTenant(req: Request, _res: Response, next: NextFunction):
 
   if (org.status === 'SUSPENDED' || org.status === 'CANCELLED') {
     return next(new AppError(`Organization is ${org.status.toLowerCase()}`, 403, 'TENANT_SUSPENDED'));
+  }
+
+  // Allow registered device authentication with matching tenant
+  if (req.device) {
+    if (req.device.organization_id !== org.id) {
+      return next(new AppError('Cross-tenant access denied: Device does not belong to this organization', 403, 'CROSS_TENANT_ACCESS_DENIED'));
+    }
+    req.tenantId = org.id;
+    req.userRole = 'DEVICE';
+    req.userPermissions = ['devices:manage', 'attendance:write', 'visitors:read'];
+    return next();
+  }
+
+  if (!req.user) {
+    return next(new AppError('Authentication required before tenant resolution', 401, 'UNAUTHORIZED'));
   }
 
   // Allow platform super admin global bypass with tenant context

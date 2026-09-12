@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { personService } from './personService.js';
+import { NextFunction, Request, Response } from 'express';
 import { AppError } from '../../middleware/errorHandler.js';
+import { personService } from './personService.js';
 
 export const personController = {
   list(req: Request, res: Response, next: NextFunction) {
@@ -40,6 +40,19 @@ export const personController = {
         actor_id: req.user!.id,
       });
       res.status(201).json({ success: true, data: person });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  bulkCreate(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = personService.bulkCreatePersons({
+        organization_id: req.tenantId!,
+        persons: req.body.persons,
+        actor_id: req.user!.id,
+      });
+      res.status(201).json({ success: true, data: result });
     } catch (err) {
       next(err);
     }

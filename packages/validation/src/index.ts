@@ -162,6 +162,10 @@ export const CreatePersonSchema = z.object({
   roles: z.array(z.string().uuid()).optional(),
 });
 
+export const BulkCreatePersonsSchema = z.object({
+  persons: z.array(CreatePersonSchema).min(1).max(500),
+});
+
 export const AssignRoleSchema = z.object({
   person_id: z.string().uuid(),
   role_id: z.string().uuid(),
@@ -195,6 +199,42 @@ export const CreateLocationSchema = z.object({
   ble_beacons: z.array(z.string()).optional(),
   ip_ranges: z.array(z.string()).optional(),
   timezone: z.string().default('UTC'),
+});
+
+export const CreateDeviceSchema = z.object({
+  location_id: z.string().uuid().optional().nullable(),
+  name: z.string().min(1, 'Device name is required'),
+  device_type: z.enum([
+    'MOBILE',
+    'WEB',
+    'RFID_READER',
+    'NFC_READER',
+    'FINGERPRINT_READER',
+    'FACE_TERMINAL',
+    'CAMERA',
+    'KIOSK',
+    'GATE',
+    'TURNSTILE',
+    'BEACON',
+    'IOT_DEVICE',
+    'ACCESS_CONTROL',
+  ]),
+  serial_number: z.string().min(1, 'Serial number is required'),
+  ip_address: z.string().optional(),
+  firmware_version: z.string().optional(),
+  config: z.record(z.any()).optional(),
+});
+
+export const UpdateDeviceSchema = CreateDeviceSchema.partial().extend({
+  status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED', 'DECOMMISSIONED']).optional(),
+});
+
+export const CreateLeaveTypeSchema = z.object({
+  name: z.string().min(1),
+  code: z.string().min(1).regex(/^[A-Z0-9_]+$/),
+  is_paid: z.boolean().default(true),
+  days_allowed_per_year: z.number().int().positive().default(14),
+  requires_approval: z.boolean().default(true),
 });
 
 // ==========================================
@@ -420,6 +460,17 @@ export const CreateVisitorPassSchema = z.object({
   allowed_location_ids: z.array(z.string().uuid()).default([]),
   valid_from: z.string().datetime(),
   valid_until: z.string().datetime(),
+});
+
+export const VisitorCheckInSchema = z.object({
+  location_id: z.string().uuid().optional(),
+  pass_code: z.string().optional(),
+  timestamp: z.string().optional(),
+});
+
+export const VisitorCheckOutSchema = z.object({
+  timestamp: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 // ==========================================

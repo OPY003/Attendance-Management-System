@@ -5,12 +5,16 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { attendanceRouter } from './modules/attendance/attendanceRoutes.js';
 import { authRouter } from './modules/auth/authRoutes.js';
 import { detectionRouter } from './modules/detection/detectionRoutes.js';
+import { deviceRouter } from './modules/devices/deviceRoutes.js';
 import { groupRouter } from './modules/groups/groupRoutes.js';
+import { leaveRouter } from './modules/leave/leaveRoutes.js';
 import { locationRouter } from './modules/locations/locationRoutes.js';
 import { organizationRouter } from './modules/organizations/organizationRoutes.js';
 import { personRouter } from './modules/persons/personRoutes.js';
 import { roleRouter } from './modules/roles/roleRoutes.js';
 import { scheduleRouter } from './modules/schedules/scheduleRoutes.js';
+import { visitorRouter } from './modules/visitors/visitorRoutes.js';
+import { offlineSyncRouter } from './modules/sync/offlineSyncRoutes.js';
 
 export function createApp(): express.Application {
   const app = express();
@@ -21,7 +25,15 @@ export function createApp(): express.Application {
     cors({
       origin: '*', // Configurable in production
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'x-organization-id'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'x-organization-id',
+        'x-device-id',
+        'x-device-key',
+        'x-device-secret',
+        'x-api-key',
+      ],
     })
   );
   app.use(express.json({ limit: '10mb' }));
@@ -51,6 +63,10 @@ export function createApp(): express.Application {
   app.use('/api/v1', roleRouter);
   app.use('/api/v1', personRouter);
   app.use('/api/v1', locationRouter);
+  app.use('/api/v1', leaveRouter);
+  app.use('/api/v1', visitorRouter);
+  app.use('/api/v1', deviceRouter);
+  app.use('/api/v1', offlineSyncRouter);
   app.use('/api/v1', groupRouter);
   app.use('/api/v1', scheduleRouter);
   app.use('/api/v1', attendanceRouter);

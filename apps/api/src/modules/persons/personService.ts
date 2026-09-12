@@ -1,8 +1,8 @@
+import { CustomFieldValue, Person } from '@uapms/shared-types';
 import { v4 as uuidv4 } from 'uuid';
-import { query, queryOne, execute, transaction } from '../../core/database/db.js';
+import { execute, query, queryOne, transaction } from '../../core/database/db.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { auditService } from '../audit/auditService.js';
-import { Person, CustomFieldValue } from '@uapms/shared-types';
 
 export interface ListPersonsFilter {
   organization_id: string;
@@ -225,6 +225,91 @@ export const personService = {
 
       return this.getPersonById(params.organization_id, personId);
     });
+  },
+
+  bulkCreatePersons(params: {
+    organization_id: string;
+    persons: Array<{
+      person_code: string;
+      first_name: string;
+      last_name: string;
+      email?: string;
+      phone?: string;
+      national_id?: string;
+      status?: string;
+      primary_department_id?: string;
+      primary_location_id?: string;
+      metadata?: Record<string, any>;
+      roles?: string[];
+    }>;
+    actor_id: string;
+  }) {
+    const codes = new Set<string>();
+    for (const person of params.persons) {
+      if (codes.has(person.person_code)) {
+        throw new AppError(`Person code "${person.person_code}" is duplicated in the import`, 409, 'PERSON_CODE_DUPLICATE_IMPORT');
+      }
+      codes.add(person.person_code);
+    }
+
+    const existing = query<any>(
+      `SELECT person_code FROM persons WHERE organization_id = ? AND person_code IN (${params.persons.map(() => '?').join(',')})`,
+      [params.organization_id, ...codes]
+    );
+    if (existing.length > 0) {
+      throw new AppError(`Person code "${existing[0].person_code}" already exists in this organization`, 409, 'PERSON_CODE_EXISTS');
+    }
+
+    const now = new Date().toISOString();
+    const createdIds: string[] = [];
+
+    transaction(() => {
+      for (const person of params.persons) {
+        const personId = uuidv4();
+        createdIds.push(personId);
+        execute(
+          `INSERT INTO persons (
+            id, organization_id, person_code, first_name, last_name, email, phone,
+            national_id, status, primary_department_id, primary_location_id, metadata, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            personId,
+            params.organization_id,
+            person.person_code,
+            person.first_name,
+            person.last_name,
+            person.email || null,
+            person.phone || null,
+            person.national_id || null,
+            person.status || 'ACTIVE',
+            person.primary_department_id || null,
+            person.primary_location_id || null,
+            person.metadata ? JSON.stringify(person.metadata) : null,
+            now,
+            now,
+          ]
+        );
+
+        for (const roleId of person.roles || []) {
+          execute('INSERT OR IGNORE INTO person_roles (person_id, role_id, organization_id) VALUES (?, ?, ?)', [
+            personId,
+            roleId,
+            params.organization_id,
+          ]);
+        }
+
+        auditService.log({
+          organization_id: params.organization_id,
+          actor_id: params.actor_id,
+          action: 'PERSON_CREATED',
+          entity_type: 'PERSON',
+          entity_id: personId,
+          new_state: { person_code: person.person_code, name: `${person.first_name} ${person.last_name}` },
+        });
+      }
+    });
+
+    return { imported: createdIds.length, person_ids: createdIds };
   },
 
   /**

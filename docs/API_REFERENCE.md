@@ -724,6 +724,186 @@ Content-Type: application/json
 
 ---
 
+## Leave Management
+
+### Create Leave Type
+
+```http
+POST /{orgId}/leave/types
+Authorization: Bearer {access_token}
+x-organization-id: {org-id}
+Content-Type: application/json
+
+{
+  "name": "Annual Leave",
+  "code": "ANNUAL",
+  "is_paid": true,
+  "days_allowed_per_year": 20
+}
+```
+
+**Required Permission**: `leave:review`
+
+---
+
+### Submit Leave Request
+
+```http
+POST /{orgId}/leave/requests
+Authorization: Bearer {access_token}
+x-organization-id: {org-id}
+Content-Type: application/json
+
+{
+  "person_id": "uuid-here",
+  "leave_type_id": "uuid-here",
+  "start_date": "2026-10-05",
+  "end_date": "2026-10-07",
+  "reason": "Personal vacation"
+}
+```
+
+**Required Permission**: `leave:request`
+
+---
+
+### Review Leave Request
+
+```http
+PUT /{orgId}/leave/requests/{requestId}/review
+Authorization: Bearer {access_token}
+x-organization-id: {org-id}
+Content-Type: application/json
+
+{
+  "status": "APPROVED",
+  "comments": "Approved by supervisor"
+}
+```
+
+**Required Permission**: `leave:review`
+
+---
+
+## Visitor Management
+
+### Create Visitor Pass
+
+```http
+POST /{orgId}/visitors
+Authorization: Bearer {access_token}
+x-organization-id: {org-id}
+Content-Type: application/json
+
+{
+  "visitor_name": "Alice Guest",
+  "visitor_email": "alice.guest@example.com",
+  "visitor_phone": "+1555123456",
+  "host_person_id": "uuid-here",
+  "purpose": "Vendor Assessment",
+  "allowed_location_ids": ["location-uuid-here"],
+  "valid_from": "2026-10-02T08:00:00.000Z",
+  "valid_until": "2026-10-02T17:00:00.000Z"
+}
+```
+
+**Required Permission**: `visitors:manage`  
+**Returns**: Visitor pass object containing generated `pass_code` (e.g. `VP-A1B2C3D4`) and signed `dynamic_qr_token` (`vqr_...`).
+
+---
+
+### Visitor Check-In
+
+```http
+POST /{orgId}/visitors/{id}/check-in
+Authorization: Bearer {access_token} OR x-device-id & x-device-key
+x-organization-id: {org-id}
+Content-Type: application/json
+
+{
+  "location_id": "location-uuid-here",
+  "pass_code": "VP-A1B2C3D4"
+}
+```
+
+**Validation**:
+- Current time must fall within `[valid_from, valid_until]`.
+- If allowed locations specified, `location_id` must match.
+- Status updates from `PRE_REGISTERED` to `CHECKED_IN`.
+
+---
+
+### Visitor Check-Out
+
+```http
+POST /{orgId}/visitors/{id}/check-out
+Authorization: Bearer {access_token} OR x-device-id & x-device-key
+x-organization-id: {org-id}
+Content-Type: application/json
+
+{}
+```
+
+**Validation**: Status updates from `CHECKED_IN` to `CHECKED_OUT` with recorded `check_out_time`.
+
+---
+
+## Device Management & Offline Synchronization
+
+### Register Device
+
+```http
+POST /{orgId}/devices
+Authorization: Bearer {access_token}
+x-organization-id: {org-id}
+Content-Type: application/json
+
+{
+  "name": "Kiosk Lobby 1",
+  "device_type": "KIOSK",
+  "serial_number": "KIOSK-001",
+  "location_id": "location-uuid-here"
+}
+```
+
+**Required Permission**: `devices:manage`  
+**Returns**: Device details and generated one-time credentials (`api_key`, `api_secret`).
+
+---
+
+### Submit Offline Event Queue
+
+```http
+POST /{orgId}/sync/offline-events
+x-device-id: {device-uuid}
+x-device-key: {device-api-key}
+x-organization-id: {org-id}
+Content-Type: application/json
+
+{
+  "device_id": "device-uuid",
+  "events": [
+    {
+      "local_event_id": "offline_ev_001",
+      "timestamp": "2026-09-10T08:15:30.000Z",
+      "detection_method": "RFID",
+      "raw_payload": {
+        "person_id": "person-uuid",
+        "rfid_tag": "TAG-12345"
+      }
+    }
+  ]
+}
+```
+
+**Features**:
+- Preserves original device event timestamp strictly.
+- Deduplication and idempotency verification.
+- Conflict detection (flags impossible travel / conflicting events as `CONFLICT` rather than silently overwriting).
+- Generates normalized attendance events and attendance records.
+
+---
+
 ## Error Handling
 
 All errors follow a consistent format:

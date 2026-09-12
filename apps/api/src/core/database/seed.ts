@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import { getDatabase, execute, transaction, queryOne } from './db.js';
+import { execute, getDatabase, queryOne, transaction } from './db.js';
 
 export const STANDARD_PERMISSIONS = [
   // Auth & Org
@@ -61,10 +61,10 @@ export const STANDARD_PERMISSIONS = [
   { code: 'privacy:dsar:manage', name: 'Process DSAR & Erasure Requests', module: 'privacy' },
 ];
 
-export async function seedDatabase(dbPath?: string) {
+export function seedDatabase(dbPath?: string) {
   const db = getDatabase(dbPath);
   const now = new Date().toISOString();
-  const passwordHash = await bcrypt.hash('Password123!', 10);
+  const passwordHash = bcrypt.hashSync('Password123!', 10);
 
   return transaction((_tx) => {
     // 1. Seed Permissions

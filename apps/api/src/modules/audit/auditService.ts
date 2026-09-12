@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { execute } from '../../core/database/db.js';
+import { execute, queryOne } from '../../core/database/db.js';
 import { logger } from '../../core/logger.js';
 
 export interface RecordAuditParams {
@@ -21,6 +21,18 @@ export const auditService = {
     const id = uuidv4();
     const createdAt = new Date().toISOString();
 
+    let validUserId: string | null = null;
+    let actorRole = params.actor_role || null;
+
+    if (params.actor_id && params.actor_id !== 'system') {
+      const user = queryOne('SELECT id FROM users WHERE id = ?', [params.actor_id]);
+      if (user) {
+        validUserId = params.actor_id;
+      } else if (!actorRole) {
+        actorRole = `DEVICE:${params.actor_id}`;
+      }
+    }
+
     try {
       execute(
         `INSERT INTO audit_logs (
@@ -30,8 +42,8 @@ export const auditService = {
         [
           id,
           params.organization_id || null,
-          params.actor_id || null,
-          params.actor_role || null,
+          validUserId,
+          actorRole,
           params.action,
           params.entity_type,
           params.entity_id,
